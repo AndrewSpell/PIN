@@ -7,106 +7,66 @@ namespace GameServer.Systems.Combat;
 
 public class FactionHostility
 {
-    private readonly Dictionary<(uint, uint), bool> _factionFriendlyDict;
-    private readonly Dictionary<(uint, uint), bool> _factionHostileDict;
+    private readonly Dictionary<(uint, uint), (int Precedence, sbyte Stance)> _relations;
+    private readonly Dictionary<uint, Faction> _factions;
     private readonly ILogger _logger;
 
     public FactionHostility()
     {
         _logger = Log.ForContext<FactionHostility>();
-        _factionFriendlyDict = [];
-        _factionHostileDict = [];
+        _relations = [];
+        _factions = [];
         LoadFromSDB();
     }
 
     public void LoadFromSDB()
     {
-        var factions = SDBInterface.GetFactions();
-        var relations = SDBInterface.GetFactionRelations();
-
-        foreach (var relation in relations)
+        foreach (var faction in SDBInterface.GetFactions())
         {
-            if (relation.FactionA == 0)
+            _factions[faction.Id] = faction;
+        }
+
+        foreach (var relation in SDBInterface.GetFactionRelations())
+        {
+            // A row naming both factions beats a row with one wildcard (faction 0), which beats the all-factions row
+            var precedence = (relation.FactionA == 0 ? 0 : 1) + (relation.FactionB == 0 ? 0 : 1) + 1;
+            foreach (var a in Expand(relation.FactionA))
             {
-                foreach (var primaryFaction in factions)
+                foreach (var b in Expand(relation.FactionB))
                 {
-                    if (relation.FactionB == 0)
+                    SetRelation((a, b), precedence, relation.HostilityStance);
+                    if (relation.HostilityBidirectional == 1)
                     {
-                        foreach (var secondaryFaction in factions)
-                        {
-                            ProcessFactionRelation(primaryFaction, secondaryFaction, relation);
-                        }
+                        SetRelation((b, a), precedence, relation.HostilityStance);
                     }
-                    else
-                    {
-                        var secondaryFaction = factions[(int)relation.FactionB - 1];
-                        ProcessFactionRelation(primaryFaction, secondaryFaction, relation);
-                    }
-                }
-            }
-            else
-            {
-                var primaryFaction = factions[(int)relation.FactionA - 1];
-                if (relation.FactionB == 0)
-                {
-                    foreach (var secondaryFaction in factions)
-                    {
-                        ProcessFactionRelation(primaryFaction, secondaryFaction, relation);
-                    }
-                }
-                else
-                {
-                    var secondaryFaction = factions[(int)relation.FactionB - 1];
-                    ProcessFactionRelation(primaryFaction, secondaryFaction, relation);
                 }
             }
         }
 
-        Log.Debug($"FactionHostility initalized");
+        _logger.Debug("FactionHostility initialized with {Count} faction pairs", _relations.Count);
     }
 
     public bool IsFriendlyFaction(uint sourceFactionId, uint targetFactionId)
     {
-        var key = (sourceFactionId, targetFactionId);
-        var found = _factionFriendlyDict.TryGetValue(key, out bool result);
-        if (found)
-        {
-            Log.Debug($"FactionHostility {sourceFactionId} is {(result ? string.Empty : "NOT")} Friendly with {targetFactionId}");
-            return result;
-        }
-        else
-        {
-            Log.Warning($"IsFriendlyFaction Failed to get relation {sourceFactionId} - {targetFactionId}");
-            return false;
-        }
+        return GetFactionStance(sourceFactionId, targetFactionId) == HostilityStance.Friendly;
     }
 
     public bool IsHostileFaction(uint sourceFactionId, uint targetFactionId)
     {
-        var key = (sourceFactionId, targetFactionId);
-        var found = _factionHostileDict.TryGetValue(key, out bool result);
-        if (found)
-        {
-            Log.Debug($"FactionHostility {sourceFactionId} is {(result ? string.Empty : "NOT")} Hostile with {targetFactionId}");
-            return result;
-        }
-        else
-        {
-            Log.Warning($"IsHostileFaction Failed to get relation {sourceFactionId} - {targetFactionId}");
-            return false;
-        }
+        return GetFactionStance(sourceFactionId, targetFactionId) == HostilityStance.Hostile;
     }
 
+    // FactionRelations.hostility_stance runs from -2 to 2: negative is hostile, 0 neutral, positive friendly.
+    // A neutral relation falls back to the factions' default stance, where -1 means hostile to everyone.
     public HostilityStance GetFactionStance(uint sourceFactionId, uint targetFactionId)
     {
-        bool isFriendly = IsFriendlyFaction(sourceFactionId, targetFactionId);
-        if (isFriendly)
+        var stance = _relations.TryGetValue((sourceFactionId, targetFactionId), out var relation) ? relation.Stance : (sbyte)0;
+        if (stance >= 1)
         {
             return HostilityStance.Friendly;
         }
 
-        bool isHostile = IsHostileFaction(sourceFactionId, targetFactionId);
-        if (isHostile)
+        if (stance <= -1 || DefaultStance(sourceFactionId) <= -1 || DefaultStance(targetFactionId) <= -1)
         {
             return HostilityStance.Hostile;
         }
@@ -130,48 +90,16 @@ public class FactionHostility
     }
     */
 
-    private void ProcessFactionRelation(Faction primaryFaction, Faction secondaryFaction, FactionRelations relation)
+    private IEnumerable<uint> Expand(uint factionId) => factionId == 0 ? _factions.Keys : [factionId];
+
+    private sbyte DefaultStance(uint factionId) => _factions.TryGetValue(factionId, out var faction) ? faction.DefaultStance : (sbyte)0;
+
+    private void SetRelation((uint, uint) key, int precedence, sbyte stance)
     {
-        var key = (primaryFaction.Id, secondaryFaction.Id);
-        bool friendly = false;
-        bool hostile = false;
-
-        if (relation.HostilityStance >= 1)
+        // Equal precedence keeps the old behaviour of the later row winning
+        if (!_relations.TryGetValue(key, out var existing) || precedence >= existing.Precedence)
         {
-            friendly = true;
-        }
-        else if (primaryFaction.DefaultStance <= -1)
-        {
-            hostile = true;
-        }
-
-        ProcessFactionRelationSet(key, friendly, hostile);
-
-        if (relation.HostilityBidirectional == 1)
-        {
-            var bikey = (secondaryFaction.Id, primaryFaction.Id);
-            ProcessFactionRelationSet(bikey, friendly, hostile);
-        }
-    }
-
-    private void ProcessFactionRelationSet((uint, uint) key, bool friendly, bool hostile)
-    {
-        if (_factionFriendlyDict.ContainsKey(key))
-        {
-            _factionFriendlyDict[key] = friendly;
-        }
-        else
-        {
-            _factionFriendlyDict.Add(key, friendly);
-        }
-
-        if (_factionHostileDict.ContainsKey(key))
-        {
-            _factionHostileDict[key] = hostile;
-        }
-        else
-        {
-            _factionHostileDict.Add(key, hostile);
+            _relations[key] = (precedence, stance);
         }
     }
 }
