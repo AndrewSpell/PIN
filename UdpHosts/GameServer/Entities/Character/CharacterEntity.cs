@@ -134,6 +134,9 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
     public int TimePlayed { get; set; }
     public MaxVital MaxShields { get; private set; }
     public MaxVital MaxHealth { get; private set; }
+
+    // Level a monster was spawned at, 0 for players
+    public byte MonsterLevel { get; private set; }
     public int CurrentHealth { get; private set; }
     public int CurrentShields { get; private set; }
     public GibVisuals GibVisualsInfo { get; set; }
@@ -255,7 +258,7 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
         return IsPlayerControlled ? StaticInfo.DisplayName : base.ToString();
     }
 
-    public void LoadMonster(uint typeId)
+    public void LoadMonster(uint typeId, byte? level = null)
     {
         // TODO: GetMonsterVisualOptions
         var monsterInfo = SDBInterface.GetMonster(typeId);
@@ -361,6 +364,11 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
                 Index = 2, PreviousIndex = 1, PlaySwapAnimation = 0, Time = Shard.CurrentTime
             });
         }
+
+        MonsterLevel = level ?? SDBUtils.GetZoneMonsterLevel(Shard.ZoneId);
+        Character_EquipmentView.LevelProp = MonsterLevel;
+        Character_EquipmentView.ScalingLevelProp = MonsterLevel;
+        SetMaxHealth(SDBUtils.GetMonsterMaxHealth(monsterInfo, MonsterLevel), true);
     }
 
     public void LoadRemote(CharacterAndBattleframeVisuals remoteData)
