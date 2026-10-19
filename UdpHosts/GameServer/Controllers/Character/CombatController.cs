@@ -27,7 +27,11 @@ public class CombatController : Base
     [MessageID(GssCharacterCommand.FireInputIgnored)]
     public void FireInputIgnored(INetworkClient client, IPlayer player, ulong entityId, GamePacket packet)
     {
-        // TODO: Implement
+        var query = packet.Unpack<FireInputIgnored>();
+        var character = player.CharacterEntity;
+        var weapon = character.GetActiveWeaponDetails()?.Weapon;
+        // Ignored 1 was seen while the plasma cannon was overheated
+        _logger.Debug("FireInputIgnored from {Character}: time {Time}, ignored {Ignored}, weapon {Weapon}", character, query.Time, query.Ignored, weapon?.DebugName);
     }
 
     [MessageID(GssCharacterCommand.FireBurst)]
@@ -139,6 +143,7 @@ public class CombatController : Base
     public void ReloadWeapon(INetworkClient client, IPlayer player, ulong entityId, GamePacket packet)
     {
         var query = packet.Unpack<ReloadWeapon>();
+        player.CharacterEntity.ReloadActiveWeapon();
         player.CharacterEntity.SetWeaponReloaded(query.Time);
     }
 

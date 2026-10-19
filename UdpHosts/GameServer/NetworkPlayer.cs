@@ -164,6 +164,7 @@ public class NetworkPlayer : NetworkClient, INetworkPlayer
 
         CharacterEntity.PositionAtSpawnPoint(spawnPoint);
         CharacterEntity.SetSpawnTime(AssignedShard.CurrentTime);
+        CharacterEntity.RefillAmmo();
         var forcedMove = new ForcedMovement
         {
             Data = new ForcedMovementData
