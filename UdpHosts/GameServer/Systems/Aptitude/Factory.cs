@@ -116,8 +116,8 @@ public class Factory
                 return new InstantActivationCommand(SDBInterface.GetInstantActivationCommandDef(commandId));
             // case CommandType.TargetFriendlies:
             //     return new TargetFriendliesCommand(SDBInterface.GetTargetFriendliesCommandDef(commandId));
-            // case CommandType.TargetHostiles:
-            //     return new TargetHostilesCommand(SDBInterface.GetTargetHostilesCommandDef(commandId));
+            case CommandType.TargetHostiles:
+                return new TargetHostilesCommand(SDBInterface.GetTargetHostilesCommandDef(commandId));
             case CommandType.TargetPBAE:
                 return new TargetPBAECommand(SDBInterface.GetTargetPBAECommandDef(commandId));
             case CommandType.TargetSelf:
@@ -168,8 +168,8 @@ public class Factory
                 return new TargetPreviousCommand(SDBInterface.GetTargetPreviousCommandDef(commandId));
             case CommandType.HasTargetsDuration:
                 return new HasTargetsDurationCommand(SDBInterface.GetHasTargetsDurationCommandDef(commandId));
-            // case CommandType.InflictDamage:
-            //     return new InflictDamageCommand(SDBInterface.GetInflictDamageCommandDef(commandId));
+            case CommandType.InflictDamage:
+                return new InflictDamageCommand(SDBInterface.GetInflictDamageCommandDef(commandId));
             // case CommandType.CreateAbilityObject:
             //     return new CreateAbilityObjectCommand(CustomDBInterface.GetCreateAbilityObjectCommandDef(commandId));
             case CommandType.DestroyAbilityObject:
@@ -624,8 +624,8 @@ public class Factory
                 return new CarryableObjectSpawnCommand(CustomDBInterface.GetCarryableObjectSpawnCommandDef(commandId));
             // case CommandType.UnlockVisualOverrides:
             //     return new UnlockVisualOverridesCommand(CustomDBInterface.GetUnlockVisualOverridesCommandDef(commandId));
-            // case CommandType.RequireItemAttribute:
-            //     return new RequireItemAttributeCommand(SDBInterface.GetRequireItemAttributeCommandDef(commandId));
+            case CommandType.RequireItemAttribute:
+                return new RequireItemAttributeCommand(SDBInterface.GetRequireItemAttributeCommandDef(commandId));
             // case CommandType.AddLootTable:
             //     return new AddLootTableCommand(CustomDBInterface.GetAddLootTableCommandDef(commandId));
             // case CommandType.UpdateWaitAndFireOnce:

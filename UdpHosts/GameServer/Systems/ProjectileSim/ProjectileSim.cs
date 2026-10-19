@@ -159,7 +159,7 @@ public class ProjectileSim
                     if (source != null)
                     {
                         _shard.Physics.HandleProjectileImpact(source, projectile.TraceId, hit, projectile.ImpactRadius, projectile.Damage, projectile.DamageType, projectile.IsAbilityProjectile);
-                        ActivateImpactAbility(source, projectile, hit.HitEntityId);
+                        ActivateImpactAbility(source, projectile, hit.HitEntityId, hit.HitPosition);
                     }
                 }
             }
@@ -258,8 +258,8 @@ public class ProjectileSim
     }
 
     // The ammo's impact ability is where hit effects live, e.g. the Arc Thrower repairing friendly deployables.
-    // Weapon damage itself is still applied by HandleProjectileImpact, which is why InflictDamageCommand stays a no-op.
-    private void ActivateImpactAbility(CharacterEntity source, ActiveProjectile projectile, ulong hitEntityId)
+    // Weapon damage itself is still applied by HandleProjectileImpact, so InflictDamageCommand skips weapon damage on impacts.
+    private void ActivateImpactAbility(CharacterEntity source, ActiveProjectile projectile, ulong hitEntityId, Vector3 hitPosition)
     {
         var abilityId = projectile.Ammo?.AbilityId ?? 0;
         if (abilityId == 0)
@@ -273,7 +273,8 @@ public class ProjectileSim
             targets.Push(target);
         }
 
-        _shard.Abilities.HandleActivateAbility(_shard, source, abilityId, _shard.CurrentTime, targets);
+        // Area targeting (TargetPBAE with use_init_pos) centres on the impact, not on the shooter
+        _shard.Abilities.HandleActivateAbility(_shard, source, abilityId, _shard.CurrentTime, targets, initPosition: hitPosition, executionHint: ExecutionHint.Impact);
     }
 
     private CharacterEntity GetSourceEntity(ActiveProjectile proj)

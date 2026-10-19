@@ -1,4 +1,6 @@
-﻿using GameServer.StaticDB.Records.aptfs;
+﻿using GameServer.Entities;
+using GameServer.StaticDB.Records.aptfs;
+using GameServer.Systems.Combat;
 
 namespace GameServer.Systems.Aptitude.Commands.Target;
 
@@ -12,6 +14,7 @@ public class TargetHostilesCommand : Command, ICommand
         Params = par;
     }
 
+    // Keeps the current targets that are hostile to Self, minus Self, the initiator and Self's owner unless included
     public override void Execute(Context context, ref CommandResult result)
     {
         var previousTargets = context.Targets;
@@ -19,16 +22,18 @@ public class TargetHostilesCommand : Command, ICommand
 
         foreach (var target in previousTargets)
         {
-            // add  || (target is friendly)
-            if (
-                (target == context.Self && Params.IncludeSelf == 0)
+            if ((target == context.Self && Params.IncludeSelf == 0)
                 || (target == context.Initiator && Params.IncludeInitiator == 0)
                 || (target == context.Self.Owner && Params.IncludeOwner == 0))
             {
                 continue;
             }
 
-            context.Targets.Push(target);
+            if (target == context.Self || target == context.Initiator || target == context.Self.Owner
+                || (context.Self is IEntity self && target is IEntity entity && context.Shard.Hostility.GetStance(self, entity) == HostilityStance.Hostile))
+            {
+                newTargets.Push(target);
+            }
         }
 
         context.FormerTargets = previousTargets;
