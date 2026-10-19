@@ -1,4 +1,5 @@
 using System;
+using GameServer.Enums;
 
 namespace GameServer.Entities.Character;
 
@@ -19,9 +20,10 @@ public sealed partial class CharacterEntity
         {
             for (byte mode = 0; mode <= 1; mode++)
             {
-                var weapon = _weaponDetailsCache?[index, mode]?.Weapon;
-                _clip[index, mode] = weapon?.BaseClipSize ?? 0;
-                _reserve[index, mode] = weapon == null ? (ushort)0 : (ushort)Math.Max(0, weapon.MaxAmmo - weapon.BaseClipSize);
+                var details = _weaponDetailsCache?[index, mode];
+                var clipSize = ClipSize(details);
+                _clip[index, mode] = clipSize;
+                _reserve[index, mode] = (ushort)Math.Max(0, MaxAmmo(details) - clipSize);
                 SyncAmmo(index, mode);
             }
         }
@@ -49,13 +51,13 @@ public sealed partial class CharacterEntity
     public void ReloadActiveWeapon()
     {
         var (index, mode) = (WeaponIndex.Index, GetActiveFireModeIndex());
-        var weapon = index is 1 or 2 ? _weaponDetailsCache?[index, mode]?.Weapon : null;
-        if (weapon == null)
+        var details = index is 1 or 2 ? _weaponDetailsCache?[index, mode] : null;
+        if (details?.Weapon == null)
         {
             return;
         }
 
-        var moved = Math.Min(weapon.BaseClipSize - _clip[index, mode], (int)_reserve[index, mode]);
+        var moved = Math.Min(ClipSize(details) - _clip[index, mode], (int)_reserve[index, mode]);
         if (moved > 0)
         {
             _clip[index, mode] += (ushort)moved;
@@ -72,8 +74,9 @@ public sealed partial class CharacterEntity
         {
             for (byte mode = 0; mode <= 1; mode++)
             {
-                var weapon = _weaponDetailsCache?[index, mode]?.Weapon;
-                if (weapon == null || weapon.ClipRegenMs == 0 || _clip[index, mode] >= weapon.BaseClipSize || now < _nextClipRegen[index, mode])
+                var details = _weaponDetailsCache?[index, mode];
+                var weapon = details?.Weapon;
+                if (weapon == null || weapon.ClipRegenMs == 0 || _clip[index, mode] >= ClipSize(details) || now < _nextClipRegen[index, mode])
                 {
                     continue;
                 }
@@ -101,6 +104,22 @@ public sealed partial class CharacterEntity
         }
 
         SyncAmmo(index, mode);
+    }
+
+    // The client sizes clips and reserves from the weapon item's attributes when it has them, e.g. the Smart Blaster's
+    // Weapon Magazine Size is 10 against a template clip of 40, and with 40 sent the client never allowed a reload
+    private static ushort ClipSize(ActiveWeaponDetails details) => AttributeOr(details, ItemAttributeId.WeaponMagazineSize, details?.Weapon?.BaseClipSize ?? 0);
+
+    private static ushort MaxAmmo(ActiveWeaponDetails details) => AttributeOr(details, ItemAttributeId.MaxAmmoCapacity, details?.Weapon?.MaxAmmo ?? 0);
+
+    private static ushort AttributeOr(ActiveWeaponDetails details, ItemAttributeId attribute, ushort fallback)
+    {
+        if (details?.Weapon == null)
+        {
+            return 0;
+        }
+
+        return details.Attributes.TryGetValue((ushort)attribute, out var value) && value > 0 ? (ushort)MathF.Round(value) : fallback;
     }
 
     // Weapon index 1 maps to the _0 fields and 2 to _1, alt fire to the Alt fields. NPCs have no combat controller.

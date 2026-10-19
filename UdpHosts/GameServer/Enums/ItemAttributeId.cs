@@ -11,6 +11,7 @@ public enum ItemAttributeId : ushort
     JumpHeight = 37,
     WeaponDamage = 954,
     WeaponMagazineSize = 956,
+    MaxAmmoCapacity = 1810,
     WeaponRange = 957,
     WeaponSpread = 958,
     JetSprintCost = 1121,
