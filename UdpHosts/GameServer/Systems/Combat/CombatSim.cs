@@ -14,7 +14,6 @@ public class CombatSim
     private readonly EntityManager.EntityManager _entityMan;
     private readonly DamageSystem _damage;
     private readonly HitFeedback _feedback;
-    private readonly HostilityResolver _hostility;
 
     public CombatSim(IEventBus eventBus, EntityManager.EntityManager entityMan, DamageSystem damage, Shard shard)
     {
@@ -24,7 +23,6 @@ public class CombatSim
         _shard = shard;
 
         _feedback = new HitFeedback(_shard);
-        _hostility = new HostilityResolver();
 
         _eventBus.Subscribe<ProjectileHitEvent>(OnProjectileHit);
     }
@@ -49,7 +47,7 @@ public class CombatSim
         }
 
         // TODO: Repair friendly deployables, through the ammo's impact ability (HealDamageCommand)
-        if (!_hostility.CanDamage(source, target))
+        if (!_shard.Hostility.CanDamage(source, target))
         {
             _logger.Debug("Ignoring hit on {Target} by {Source}, they're not hostile to each other", target, source);
             return;

@@ -39,6 +39,7 @@ public interface IShard : IPacketSender
     ChatService Chat { get; }
     AdminService Admin { get; }
     DamageSystem Damage { get; }
+    HostilityResolver Hostility { get; }
     CharacterLifecycleService CharacterLifecycle { get; }
     PlayerRespawnService PlayerRespawn { get; }
     uint ZoneId { get; }

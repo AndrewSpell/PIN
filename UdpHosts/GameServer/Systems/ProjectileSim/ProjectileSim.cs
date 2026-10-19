@@ -7,6 +7,7 @@ using GameServer.Entities.Character;
 using GameServer.Enums;
 using GameServer.Physics;
 using GameServer.StaticDB.Records.dbitems;
+using GameServer.Systems.Aptitude;
 
 namespace GameServer.Systems.ProjectileSim;
 
@@ -158,6 +159,7 @@ public class ProjectileSim
                     if (source != null)
                     {
                         _shard.Physics.HandleProjectileImpact(source, projectile.TraceId, hit, projectile.ImpactRadius, projectile.Damage, projectile.DamageType, projectile.IsAbilityProjectile);
+                        ActivateImpactAbility(source, projectile, hit.HitEntityId);
                     }
                 }
             }
@@ -253,6 +255,25 @@ public class ProjectileSim
         proj.BouncesRemaining--;
 
         return true;
+    }
+
+    // The ammo's impact ability is where hit effects live, e.g. the Arc Thrower repairing friendly deployables.
+    // Weapon damage itself is still applied by HandleProjectileImpact, which is why InflictDamageCommand stays a no-op.
+    private void ActivateImpactAbility(CharacterEntity source, ActiveProjectile projectile, ulong hitEntityId)
+    {
+        var abilityId = projectile.Ammo?.AbilityId ?? 0;
+        if (abilityId == 0)
+        {
+            return;
+        }
+
+        var targets = new AptitudeTargets();
+        if (hitEntityId != 0 && _shard.Entities.TryGetValue(hitEntityId, out var hitEntity) && hitEntity is IAptitudeTarget target)
+        {
+            targets.Push(target);
+        }
+
+        _shard.Abilities.HandleActivateAbility(_shard, source, abilityId, _shard.CurrentTime, targets);
     }
 
     private CharacterEntity GetSourceEntity(ActiveProjectile proj)
