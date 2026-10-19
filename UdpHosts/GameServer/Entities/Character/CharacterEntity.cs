@@ -690,7 +690,8 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
         }
     }
 
-    public float GetItemAttribute(ushort id) => CurrentLoadout.ItemAttributes.GetValueOrDefault(id);
+    // The loadout only sums the chassis and ability items, so weapon stats such as Weapon Damage (954) come from the weapon in hand
+    public float GetItemAttribute(ushort id) => CurrentLoadout.ItemAttributes.TryGetValue(id, out var value) ? value : GetActiveWeaponAttributes().GetValueOrDefault(id);
 
     public void AddStatModifier(uint reference, ActiveStatModifier mod)
     {
