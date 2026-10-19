@@ -106,11 +106,13 @@ public sealed partial class CharacterEntity
         SyncAmmo(index, mode);
     }
 
-    // The client sizes clips and reserves from the weapon item's attributes when it has them, e.g. the Smart Blaster's
-    // Weapon Magazine Size is 10 against a template clip of 40, and with 40 sent the client never allowed a reload
+    // The client sizes clips from the weapon item's Weapon Magazine Size when it has one: the Smart Blaster's is 10
+    // against a template clip of 40, and with 40 sent the client never allowed a reload
     private static ushort ClipSize(ActiveWeaponDetails details) => AttributeOr(details, ItemAttributeId.WeaponMagazineSize, details?.Weapon?.BaseClipSize ?? 0);
 
-    private static ushort MaxAmmo(ActiveWeaponDetails details) => AttributeOr(details, ItemAttributeId.MaxAmmoCapacity, details?.Weapon?.MaxAmmo ?? 0);
+    // Max ammo stays the template's: the client showed the Bolt Driver's reserve as 200 - clip, ignoring its Max Ammo
+    // Capacity of 250. It shows the reserve as min(sent reserve, max ammo - clip).
+    private static ushort MaxAmmo(ActiveWeaponDetails details) => details?.Weapon?.MaxAmmo ?? 0;
 
     private static ushort AttributeOr(ActiveWeaponDetails details, ItemAttributeId attribute, ushort fallback)
     {
