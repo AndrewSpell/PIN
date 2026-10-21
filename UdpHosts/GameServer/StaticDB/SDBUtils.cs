@@ -6,6 +6,7 @@ using System.Linq;
 using System.Numerics;
 using AeroMessages.GSS.Character;
 using Data;
+using Enums;
 using FauFau.Util;
 using Records.dbcharacter;
 using Records.dbitems;
@@ -202,6 +203,42 @@ public class SDBUtils
             Colors = colors,
             Palettes = [.. palettes],
         };
+    }
+
+    // Monsters carry no level of their own, so a spawn takes the bottom of its zone's level band
+    public static byte GetZoneMonsterLevel(uint zoneId)
+    {
+        var zone = SDBInterface.GetZoneRecord(zoneId);
+        var band = zone != null ? SDBInterface.GetLevelBand(zone.LevelBand) : null;
+        return band is { Min: > 0 } ? band.Min : (byte)1;
+    }
+
+    // Base health for the level from dbcharacter::MonsterScaling, times the chassis' Creature HP Modifier,
+    // times the chassis' scaling table entry for the group size (a percentage).
+    // Inferred from the SDB, not yet checked against live-game captures.
+    public static int GetMonsterMaxHealth(Monster monster, byte level, uint playerCount = 1)
+    {
+        var scaling = SDBInterface.GetMonsterScaling(level);
+        if (scaling == null)
+        {
+            _logger.Warning("No MonsterScaling for level {Level}, monster {MonsterId} falls back to level 1", level, monster.Id);
+            scaling = SDBInterface.GetMonsterScaling(1);
+        }
+
+        var hpModifier = SDBInterface.GetItemAttributeRange(monster.ChassisId, (ushort)ItemAttributeId.CreatureHPModifier)?.Base ?? 1f;
+
+        var groupScale = 1f;
+        var battleframe = SDBInterface.GetBattleframe(monster.ChassisId);
+        if (battleframe != null)
+        {
+            var entry = SDBInterface.GetScalingTableEntry(battleframe.ScalingTableId, playerCount);
+            if (entry != null)
+            {
+                groupScale = entry.HealthScale / 100f;
+            }
+        }
+
+        return Math.Max(1, (int)MathF.Round(scaling.Health * hpModifier * groupScale));
     }
 
     public static VehicleInfoResult GetDetailedVehicleInfo(ushort vehicleId)

@@ -102,6 +102,12 @@ public class StaticDBLoader : ISDBLoader
         .ToDictionary(row => row.Id);
     }
 
+    public Dictionary<byte, MonsterScaling> LoadMonsterScaling()
+    {
+        return LoadStaticDB<MonsterScaling>("dbcharacter::MonsterScaling")
+        .ToDictionary(row => row.Level);
+    }
+
     public Dictionary<uint, Turret> LoadTurret()
     {
         return LoadStaticDB<Turret>("dbcharacter::Turret")
@@ -118,6 +124,12 @@ public class StaticDBLoader : ISDBLoader
     {
         return LoadStaticDB<SinCardTemplate>("dbencounterdata::SinCardTemplate")
             .ToDictionary(row => row.Id);
+    }
+
+    public Dictionary<KeyValuePair<uint, uint>, ScalingTableEntry> LoadScalingTableEntry()
+    {
+        return LoadStaticDB<ScalingTableEntry>("dbencounterdata::ScalingTableEntry")
+            .ToDictionary(row => new KeyValuePair<uint, uint>(row.ScalingTableId, row.PlayerCount));
     }
 
     public Dictionary<uint, WarpaintPalette> LoadWarpaintPalettes()

@@ -25,6 +25,7 @@ public class SDBInterface
     private static List<FactionRelations> _factionRelations;
     private static Dictionary<uint, List<FactionReputations>> _factionReputations;
     private static Dictionary<uint, Monster> _monster;
+    private static Dictionary<byte, MonsterScaling> _monsterScaling;
     private static Dictionary<uint, Turret> _turret;
     private static Dictionary<uint, PoseType> _poseType;
     private static Dictionary<uint, CharInfo> _charInfo;
@@ -36,6 +37,7 @@ public class SDBInterface
     // dbencounterdata
     private static Dictionary<uint, MapMarkerInfo> _mapMarkerInfo;
     private static Dictionary<uint, SinCardTemplate> _sinCardTemplate;
+    private static Dictionary<KeyValuePair<uint, uint>, ScalingTableEntry> _scalingTableEntry;
 
     // dbphysicsmaterials
     private static Dictionary<uint, PhysicsMaterial> _physicsMaterial;
@@ -285,6 +287,7 @@ public class SDBInterface
         _factionRelations = loader.LoadFactionRelations();
         _factionReputations = loader.LoadFactionReputations();
         _monster = loader.LoadMonster();
+        _monsterScaling = loader.LoadMonsterScaling();
         _turret = loader.LoadTurret();
         _poseType = loader.LoadPoseType();
         _charInfo = loader.LoadCharInfo();
@@ -296,6 +299,7 @@ public class SDBInterface
         // dbencounterdata
         _mapMarkerInfo = loader.LoadMapMarkerInfo();
         _sinCardTemplate = loader.LoadSinCardTemplate();
+        _scalingTableEntry = loader.LoadScalingTableEntry();
 
         // dbphysicsmaterials
         _physicsMaterial = loader.LoadPhysicsMaterial();
@@ -540,6 +544,7 @@ public class SDBInterface
 
     public static AttributeCategory GetAttributeCategory(uint id) => _attributeCategory.GetValueOrDefault(id);
     public static AttributeDefinition GetAttributeDefinition(uint id) => _attributeDefinition.GetValueOrDefault(id);
+    public static AttributeRange GetItemAttributeRange(uint itemId, ushort attributeId) => _attributeRange.GetValueOrDefault(new KeyValuePair<uint, ushort>(itemId, attributeId));
     public static Dictionary<ushort, AttributeRange> GetItemAttributeRange(uint itemId)
     {
         return _attributeRange
@@ -580,6 +585,7 @@ public class SDBInterface
     public static List<FactionReputations> GetFactionReputations(uint id) => _factionReputations.GetValueOrDefault(id);
 
     public static Monster GetMonster(uint id) => _monster.GetValueOrDefault(id);
+    public static MonsterScaling GetMonsterScaling(byte level) => _monsterScaling.GetValueOrDefault(level);
     public static Turret GetTurret(uint id) => _turret.GetValueOrDefault(id);
     public static PoseType GetPoseType(uint id) => _poseType.GetValueOrDefault(id);
     public static CharInfo GetCharInfo(uint id) => _charInfo.GetValueOrDefault(id);
@@ -587,6 +593,7 @@ public class SDBInterface
     // dbencounterdata
     public static MapMarkerInfo GetMapMarkerInfo(uint id) => _mapMarkerInfo.GetValueOrDefault(id);
     public static SinCardTemplate GetSinCardTemplate(uint id) => _sinCardTemplate.GetValueOrDefault(id);
+    public static ScalingTableEntry GetScalingTableEntry(uint scalingTableId, uint playerCount) => _scalingTableEntry.GetValueOrDefault(new KeyValuePair<uint, uint>(scalingTableId, playerCount));
 
     // dbphysicsMaterial
     public static PhysicsMaterial GetPhysicsMaterial(uint id) => _physicsMaterial.GetValueOrDefault(id);
