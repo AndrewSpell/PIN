@@ -16,5 +16,6 @@ public enum ItemAttributeId : ushort
     JetSprintCost = 1121,
     CreatureHPModifier = 1143,
     PowerRating = 1451,
-    SprintSpeed = 1377
+    SprintSpeed = 1377,
+    AmmoRegeneration = 1762
 }

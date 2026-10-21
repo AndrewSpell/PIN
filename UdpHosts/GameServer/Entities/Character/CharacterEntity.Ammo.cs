@@ -12,6 +12,7 @@ public sealed partial class CharacterEntity
     private readonly ushort[,] _clip = new ushort[3, 2];
     private readonly ushort[,] _reserve = new ushort[3, 2];
     private readonly uint[,] _nextClipRegen = new uint[3, 2];
+    private readonly bool[,] _firing = new bool[3, 2];
 
     // Full clips and reserves for every weapon, on spawning, respawning and changing loadout
     public void RefillAmmo()
@@ -24,6 +25,7 @@ public sealed partial class CharacterEntity
                 var clipSize = ClipSize(details);
                 _clip[index, mode] = clipSize;
                 _reserve[index, mode] = (ushort)Math.Max(0, MaxAmmo(details) - clipSize);
+                _firing[index, mode] = false;
                 SyncAmmo(index, mode);
             }
         }
@@ -37,15 +39,35 @@ public sealed partial class CharacterEntity
             return;
         }
 
-        _clip[index, mode] = (ushort)Math.Max(0, _clip[index, mode] - amount);
-        var weapon = _weaponDetailsCache?[index, mode]?.Weapon;
-        if (weapon != null && weapon.ClipRegenMs > 0)
-        {
-            // Regeneration pauses while firing
-            _nextClipRegen[index, mode] = Shard.CurrentTime + weapon.ClipRegenMs;
-        }
-
+        var before = _clip[index, mode];
+        _clip[index, mode] = (ushort)Math.Max(0, before - amount);
+        _firing[index, mode] = true;
         SyncAmmo(index, mode);
+
+        // Running the clip dry triggers the weapon's clip-empty ability. The Arc Thrower's overheats it: sparks, and the
+        // weapon is restricted for 1.5 s.
+        var weapon = _weaponDetailsCache?[index, mode]?.Weapon;
+        if (before > 0 && _clip[index, mode] == 0 && weapon?.EmptyAbility > 0)
+        {
+            Shard.Abilities.HandleActivateAbility(Shard, this, weapon.EmptyAbility);
+        }
+    }
+
+    // Regeneration pauses while firing, until the client reports the trigger released (FireEnd or FireCancel)
+    public void StopFiring()
+    {
+        var now = Shard.CurrentTime;
+        for (byte index = 1; index <= 2; index++)
+        {
+            for (byte mode = 0; mode <= 1; mode++)
+            {
+                if (_firing[index, mode])
+                {
+                    _firing[index, mode] = false;
+                    _nextClipRegen[index, mode] = now + ClipRegenIntervalMs(_weaponDetailsCache?[index, mode]);
+                }
+            }
+        }
     }
 
     public void ReloadActiveWeapon()
@@ -66,7 +88,7 @@ public sealed partial class CharacterEntity
         }
     }
 
-    // Weapons with clip_regen_ms gain a round every clip_regen_ms once they stop firing, without spending reserve
+    // Weapons with clip_regen_ms regain rounds while not firing, without spending reserve
     public void TickAmmo()
     {
         var now = Shard.CurrentTime;
@@ -74,16 +96,31 @@ public sealed partial class CharacterEntity
         {
             for (byte mode = 0; mode <= 1; mode++)
             {
-                var details = _weaponDetailsCache?[index, mode];
-                var weapon = details?.Weapon;
-                if (weapon == null || weapon.ClipRegenMs == 0 || _clip[index, mode] >= ClipSize(details) || now < _nextClipRegen[index, mode])
+                if (_firing[index, mode])
                 {
                     continue;
                 }
 
-                _clip[index, mode]++;
-                _nextClipRegen[index, mode] = now + weapon.ClipRegenMs;
-                SyncAmmo(index, mode);
+                var details = _weaponDetailsCache?[index, mode];
+                var interval = ClipRegenIntervalMs(details);
+                if (interval == 0)
+                {
+                    continue;
+                }
+
+                // Ticks are 50 ms apart, so faster regen (the Firecat's 25/s) gains more than one round per tick
+                var clipSize = ClipSize(details);
+                var before = _clip[index, mode];
+                while (_clip[index, mode] < clipSize && now >= _nextClipRegen[index, mode])
+                {
+                    _clip[index, mode]++;
+                    _nextClipRegen[index, mode] += interval;
+                }
+
+                if (_clip[index, mode] != before)
+                {
+                    SyncAmmo(index, mode);
+                }
             }
         }
     }
@@ -101,6 +138,7 @@ public sealed partial class CharacterEntity
         if (clip.HasValue)
         {
             _clip[index, mode] = clip.Value;
+            _nextClipRegen[index, mode] = Shard.CurrentTime + ClipRegenIntervalMs(_weaponDetailsCache?[index, mode]);
         }
 
         SyncAmmo(index, mode);
@@ -113,6 +151,21 @@ public sealed partial class CharacterEntity
     // Max ammo stays the template's: the client showed the Bolt Driver's reserve as 200 - clip, ignoring its Max Ammo
     // Capacity of 250. It shows the reserve as min(sent reserve, max ammo - clip).
     private static ushort MaxAmmo(ActiveWeaponDetails details) => details?.Weapon?.MaxAmmo ?? 0;
+
+    // Items give their regen as Ammo Regen (Magazine) in rounds per second, over the template's clip_regen_ms: most Arc
+    // Throwers regain 13/s, against 20/s from the template's 50 ms. 0 means the weapon doesn't regenerate.
+    private static uint ClipRegenIntervalMs(ActiveWeaponDetails details)
+    {
+        var weapon = details?.Weapon;
+        if (weapon == null || weapon.ClipRegenMs == 0)
+        {
+            return 0;
+        }
+
+        return details.Attributes.TryGetValue((ushort)ItemAttributeId.AmmoRegeneration, out var perSecond) && perSecond > 0
+                   ? (uint)MathF.Round(1000f / perSecond)
+                   : weapon.ClipRegenMs;
+    }
 
     private static ushort AttributeOr(ActiveWeaponDetails details, ItemAttributeId attribute, ushort fallback)
     {
