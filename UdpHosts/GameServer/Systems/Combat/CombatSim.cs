@@ -30,7 +30,6 @@ public class CombatSim
     private void OnProjectileHit(ProjectileHitEvent evt)
     {
         // TODO: Validate that target is damageable
-        // TODO: Validate hostility
         // TODO: Damage defense calcs and stuff
         _shard.Entities.TryGetValue(evt.TargetId, out IEntity target);
         _shard.Entities.TryGetValue(evt.SourceId, out IEntity source);
@@ -44,6 +43,13 @@ public class CombatSim
         if (source == null)
         {
             _logger.Warning("Dropping ProjectileHitEvent hit because could not get source {sourceId}", evt.SourceId);
+            return;
+        }
+
+        // TODO: Repair friendly deployables, through the ammo's impact ability (HealDamageCommand)
+        if (!_shard.Hostility.CanDamage(source, target))
+        {
+            _logger.Debug("Ignoring hit on {Target} by {Source}, they're not hostile to each other", target, source);
             return;
         }
 
