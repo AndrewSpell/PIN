@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Threading;
 using AeroMessages.GSS.Character.Command;
 using GameServer.Enums;
@@ -259,7 +260,7 @@ public class AbilitySystem
         }
     }
 
-    public void HandleActivateAbility(IShard shard, IAptitudeTarget initiator, uint abilityId, uint activationTime, AptitudeTargets targets, Guid? executionId = null)
+    public void HandleActivateAbility(IShard shard, IAptitudeTarget initiator, uint abilityId, uint activationTime, AptitudeTargets targets, Guid? executionId = null, Vector3? initPosition = null, ExecutionHint executionHint = ExecutionHint.Ability)
     {
         var execId = executionId ?? Guid.NewGuid();
         using var logContext = Serilog.Context.LogContext.PushProperty("ExecutionId", execId);
@@ -280,7 +281,8 @@ public class AbilitySystem
             AbilityId = abilityId,
             Targets = targets,
             CurrentTime = activationTime,
-            ExecutionHint = ExecutionHint.Ability
+            InitPosition = initPosition ?? initiator.Position,
+            ExecutionHint = executionHint
         },
         ref abilityResult);
     }

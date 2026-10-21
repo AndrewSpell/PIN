@@ -25,7 +25,6 @@ public class TargetPBAECommand : Command, ICommand
         // Params.ScaleOffset
         // Params.ScaleQuerySize
         // Params.AimPosOffset
-        // Params.UseInitPos
         // Params.UseBodyPosition
         if (context.Targets.Count >= Params.MaxTargets)
         {
@@ -52,8 +51,8 @@ public class TargetPBAECommand : Command, ICommand
         }
 
         // It seems that all 4 combos of UseInitPos and UseBodyPosition are possible (e.g. they can both be 0, both be 1 or be exclusive)
-        // No idea what that implies...
-        Vector3 origin = context.Self.Position;
+        // No idea what that implies... UseInitPos is honoured so an ammo impact ability targets around the impact
+        Vector3 origin = Params.UseInitPos == 1 ? context.InitPosition : context.Self.Position;
         var matches = context.Shard.Entities
         .Where((pair) =>
         {

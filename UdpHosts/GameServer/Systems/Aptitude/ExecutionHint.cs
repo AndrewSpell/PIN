@@ -44,4 +44,9 @@ public enum ExecutionHint
     /// ???
     /// </summary>
     Unspecified,
+
+    /// <summary>
+    /// From the ammo's ability when a projectile hits, the projectile has already applied the weapon damage
+    /// </summary>
+    Impact,
 }

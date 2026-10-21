@@ -70,6 +70,7 @@ public class Shard : IShard
         Admin = new AdminService(this);
         var npcDeathRules = new StandardNpcDeathRules();
         Damage = new DamageSystem(EventBus, this, npcDeathRules);
+        Hostility = new HostilityResolver();
         Combat = new CombatSim(EventBus, EntityMan, Damage, this);
         CharacterLifecycle = new CharacterLifecycleService(this, EventBus, new StandardCharacterLifecycleRules());
         PlayerRespawn = new PlayerRespawnService(this, EventBus, new StandardPlayerRespawnRules(), CharacterLifecycle);
@@ -93,6 +94,7 @@ public class Shard : IShard
     public ChatService Chat { get; }
     public AdminService Admin { get; }
     public DamageSystem Damage { get; }
+    public HostilityResolver Hostility { get; }
     public CombatSim Combat { get; }
     public CharacterLifecycleService CharacterLifecycle { get; }
     public PlayerRespawnService PlayerRespawn { get; }
