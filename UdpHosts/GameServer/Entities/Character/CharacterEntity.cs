@@ -466,6 +466,7 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
         Shard.Admin.ApplyEquipmentOverrides(Player, loadout);
         CurrentLoadout = loadout;
         RebuildWeaponDetailsCache(loadout);
+        RefillAmmo();
 
         var emptyVisuals = new VisualsBlock
         {

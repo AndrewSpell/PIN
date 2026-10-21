@@ -36,7 +36,9 @@ public class WeaponSim
             var entities = GetWeaponSimPlayersEntities();
             foreach (var entity in entities)
             {
-                ProcessEntity(entity as CharacterEntity);
+                var character = entity as CharacterEntity;
+                ProcessEntity(character);
+                character?.TickAmmo();
             }
         }
     }
@@ -53,6 +55,7 @@ public class WeaponSim
 
         var weapon = activeWeaponDetails.Weapon;
         var spreadProfile = activeWeaponDetails.SpreadProfile;
+        entity.ConsumeAmmo(weapon.AmmoPerBurst);
 
         // Resolve weapon attributes: stats from weapon override template defaults
         var attrsDict = activeWeaponDetails.Attributes;
