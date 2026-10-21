@@ -15,9 +15,21 @@ public class HostilityResolver
         _factionHostility = new FactionHostility();
     }
 
+    // Neutral targets can be damaged too, only yourself and friendlies are off limits
     public bool CanDamage(IEntity attacker, IEntity target)
     {
-        return GetStance(attacker.HostilityInfo, target.HostilityInfo) == HostilityStance.Hostile;
+        var stance = GetStance(attacker, target);
+        return stance != HostilityStance.Self && stance != HostilityStance.Friendly;
+    }
+
+    public HostilityStance GetStance(IEntity a, IEntity b)
+    {
+        if (a.EntityId == b.EntityId)
+        {
+            return HostilityStance.Self;
+        }
+
+        return GetStance(a.HostilityInfo, b.HostilityInfo);
     }
 
     public HostilityStance GetStance(HostilityInfoData aInfo, HostilityInfoData bInfo)
