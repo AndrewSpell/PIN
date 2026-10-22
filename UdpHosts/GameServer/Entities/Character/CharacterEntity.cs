@@ -46,8 +46,7 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
     private readonly MapMarkerState[] _mapMarkers = new MapMarkerState[MaxMapMarkerCount];
     private readonly MovementSample[] _movementSamples = new MovementSample[_maxMovementSamples];
     private readonly Dictionary<AptitudeStat, ActiveStatModifier> _statOverrides = new();
-    private readonly Queue<PendingAbilityProjectile> _pendingAbilityProjectiles = new();
-    private int _movementSampleCount;
+    private readonly Queue<PendingAbilityProjectile> _pendingAbilityProjectiles = new();    private int _movementSampleCount;
     private int _movementSampleNewest;
     private ActiveWeaponDetails[,] _weaponDetailsCache;
 
@@ -919,11 +918,13 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
     public void SetFireCancel(uint time)
     {
         Character_CombatView.WeaponBurstCancelledProp = time;
+        StopFiring();
     }
 
     public void SetFireEnd(uint time)
     {
         Character_CombatView.WeaponBurstEndedProp = time;
+        StopFiring();
     }
 
     public void SetFireMode(byte index, FireModeData value)
@@ -1226,8 +1227,32 @@ public sealed partial class CharacterEntity : BaseAptitudeEntity, IAptitudeTarge
 
     public void SetCombatFlags(CombatFlagsData value)
     {
-        Character_CombatController.CombatFlagsProp = value;
+        // NPCs have no combat controller
+        if (Character_CombatController != null)
+        {
+            Character_CombatController.CombatFlagsProp = value;
+        }
+
         Character_CombatView.CombatFlagsProp = value;
+    }
+
+    // Status effects set combat flags while active (the Arc Thrower's overheat restricts the weapon). Like stat modifiers,
+    // they're derived from the active effects, so overlapping effects don't clear each other's flags.
+    public void RefreshCombatFlags()
+    {
+        CombatFlagsData.CharacterCombatFlags value = 0;
+        foreach (var effect in GetActiveEffects())
+        {
+            if (effect is { Context: { } ctx })
+            {
+                value |= ctx.CombatFlags;
+            }
+        }
+
+        if (value != Character_CombatView.CombatFlagsProp.Value)
+        {
+            SetCombatFlags(new CombatFlagsData { Value = value, Time = Shard.CurrentTime });
+        }
     }
 
     public void EquipItemByGUID(int loadoutId, LoadoutSlotType slot, ulong guid)

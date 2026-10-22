@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using AeroMessages.GSS.Character;
 using GameServer.Enums;
 
 namespace GameServer.Systems.Aptitude;
@@ -53,6 +54,8 @@ public class Context
     public Dictionary<ICommand, ICommandActiveContext> Actives { get; set; } = [];
 
     public Dictionary<AptitudeStat, ActiveStatModifier> StatChangelist { get; } = new();
+
+    public CombatFlagsData.CharacterCombatFlags CombatFlags { get; set; }
 
     public static Context CopyContext(Context original)
     {
